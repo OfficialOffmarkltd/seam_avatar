@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>seam_avatar — mesh viewer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #111;
+      color: #e0e0e0;
+      font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+      font-size: 13px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── top bar ── */
+    #topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 16px;
+      background: #1a1a1a;
+      border-bottom: 1px solid #2a2a2a;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+
+    #topbar h1 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: 0.02em;
+      margin-right: 4px;
+    }
+
+    .sep { width: 1px; height: 18px; background: #333; flex-shrink: 0; }
+
+    label.btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 5px;
+      border: 1px solid #333;
+      background: #222;
+      color: #ccc;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    label.btn:hover { background: #2a2a2a; border-color: #444; }
+    label.btn input { display: none; }
+
+    button.btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 5px;
+      border: 1px solid #333;
+      background: #222;
+      color: #ccc;
+      cursor: pointer;
+      font-size: 13px;
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    button.btn:hover { background: #2a2a2a; border-color: #444; }
+    button.btn.active { background: #1d3a52; border-color: #3a7fc1; color: #90c6f0; }
+    button.btn:disabled { opacity: 0.4; cursor: default; }
+
+    #filename { color: #888; font-size: 12px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ── main area ── */
+    #main {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    #canvas-wrap {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* ── drop overlay ── */
+    #drop-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: #555;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+    #drop-overlay.hidden { opacity: 0; }
+    #drop-overlay svg { opacity: 0.3; }
+    #drop-overlay p { font-size: 15px; }
+    #drop-overlay small { font-size: 12px; color: #444; }
+
+    #drag-target {
+      position: absolute;
+      inset: 0;
+      z-index: 10;
+      display: none;
+      background: rgba(58, 127, 193, 0.08);
+      border: 2px dashed #3a7fc1;
+      pointer-events: none;
+    }
+    #drag-target.visible { display: block; }
+
+    /* ── info panel ── */
+    #panel {
+      width: 220px;
+      background: #161616;
+      border-left: 1px solid #2a2a2a;
+      padding: 14px 12px;
+      overflow-y: auto;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .panel-section h2 {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #555;
+      margin-bottom: 8px;
+    }
+
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 3px 0;
+      border-bottom: 1px solid #1f1f1f;
+      font-size: 12px;
+      color: #bbb;
+    }
+    .stat-row span:last-child { color: #fff; font-variant-numeric: tabular-nums; }
+
+    .anchor-list {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .anchor-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 6px;
+      border-radius: 4px;
+      background: #1e1e1e;
+      font-size: 11px;
+      color: #aaa;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .anchor-item:hover { background: #252525; color: #fff; }
+    .anchor-item.active { background: #1d3a52; color: #90c6f0; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: #f0a030; flex-shrink: 0; }
+
+    #log {
+      font-size: 11px;
+      color: #666;
+      line-height: 1.6;
+      word-break: break-word;
+    }
+    #log .err { color: #e05050; }
+    #log .ok  { color: #50b050; }
+    #log .info { color: #888; }
+  </style>
+</head>
+<body>
+
+<!-- top bar -->
+<div id="topbar">
+  <h1>seam_avatar viewer</h1>
+  <div class="sep"></div>
+
+  <label class="btn">
+    📂 Load GLB
+    <input type="file" id="file-input" accept=".glb,.gltf" />
+  </label>
+
+  <span id="filename">no file loaded</span>
+  <div class="sep"></div>
+
+  <button class="btn" id="btn-wireframe">Wireframe</button>
+  <button class="btn active" id="btn-solid">Solid</button>
+  <button class="btn" id="btn-xray">Xray</button>
+  <div class="sep"></div>
+
+  <button class="btn" id="btn-anchors">Anchors</button>
+  <button class="btn" id="btn-reset">Reset camera</button>
+</div>
+
+<!-- main -->
+<div id="main">
+  <div id="canvas-wrap">
+    <canvas id="c"></canvas>
+    <div id="drop-overlay">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <p>Drop a .glb file here</p>
+      <small>or use the Load button above</small>
+    </div>
+    <div id="drag-target"></div>
+  </div>
+
+  <!-- right panel -->
+  <div id="panel">
+    <div class="panel-section">
+      <h2>Mesh stats</h2>
+      <div class="stat-row"><span>Vertices</span><span id="stat-verts">—</span></div>
+      <div class="stat-row"><span>Triangles</span><span id="stat-tris">—</span></div>
+      <div class="stat-row"><span>Objects</span><span id="stat-objects">—</span></div>
+      <div class="stat-row"><span>Bounds X</span><span id="stat-bx">—</span></div>
+      <div class="stat-row"><span>Bounds Y</span><span id="stat-by">—</span></div>
+      <div class="stat-row"><span>Bounds Z</span><span id="stat-bz">—</span></div>
+    </div>
+
+    <div class="panel-section" id="anchor-section" style="display:none">
+      <h2>Avatar anchors</h2>
+      <div class="anchor-list" id="anchor-list"></div>
+    </div>
+
+    <div class="panel-section">
+      <h2>Log</h2>
+      <div id="log"><span class="info">Waiting for file…</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- Three.js r158 from CDN -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader }    from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader }   from 'three/addons/loaders/DRACOLoader.js';
+
+// ── renderer setup ──────────────────────────────────────────────────────────
+const canvas  = document.getElementById('c');
+const wrap    = document.getElementById('canvas-wrap');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
+
+const scene  = new THREE.Scene();
+scene.background = new THREE.Color(0x141414);
+scene.fog = new THREE.FogExp2(0x141414, 0.012);
+
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 2000);
+camera.position.set(0, 1.6, 3.2);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.07;
+controls.target.set(0, 0.9, 0);
+controls.update();
+
+// ── lights ───────────────────────────────────────────────────────────────────
+const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+scene.add(ambientLight);
+
+const keyLight = new THREE.DirectionalLight(0xfff8f0, 1.8);
+keyLight.position.set(2, 4, 3);
+keyLight.castShadow = true;
+keyLight.shadow.mapSize.set(1024, 1024);
+keyLight.shadow.camera.near = 0.5;
+keyLight.shadow.camera.far = 20;
+keyLight.shadow.camera.left = -2;
+keyLight.shadow.camera.right = 2;
+keyLight.shadow.camera.top = 4;
+keyLight.shadow.camera.bottom = -1;
+scene.add(keyLight);
+
+const fillLight = new THREE.DirectionalLight(0xe8f4ff, 0.6);
+fillLight.position.set(-3, 2, -1);
+scene.add(fillLight);
+
+const rimLight = new THREE.DirectionalLight(0xffffff, 0.4);
+rimLight.position.set(0, 3, -4);
+scene.add(rimLight);
+
+// ── ground plane ─────────────────────────────────────────────────────────────
+const groundGeo  = new THREE.PlaneGeometry(10, 10);
+const groundMat  = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.9 });
+const ground     = new THREE.Mesh(groundGeo, groundMat);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// grid
+const grid = new THREE.GridHelper(8, 16, 0x2a2a2a, 0x222222);
+grid.position.y = 0.001;
+scene.add(grid);
+
+// ── loader ───────────────────────────────────────────────────────────────────
+const dracoLoader = new DRACOLoader();
+dracoLoader.setDecoderPath('https://cdn.jsdelivr.net/npm/three@0.158.0/examples/jsm/libs/draco/');
+
+const gltfLoader = new GLTFLoader();
+gltfLoader.setDRACOLoader(dracoLoader);
+
+// ── state ────────────────────────────────────────────────────────────────────
+let currentModel    = null;
+let anchorGroup     = null;
+let anchorDots      = [];
+let showAnchors     = false;
+let highlightedDot  = null;
+
+const SOLID_MAT = new THREE.MeshStandardMaterial({
+  color: 0xc8a882,
+  roughness: 0.7,
+  metalness: 0.0,
+});
+const WIRE_MAT = new THREE.MeshBasicMaterial({
+  color: 0x3a7fc1,
+  wireframe: true,
+});
+const XRAY_MAT = new THREE.MeshBasicMaterial({
+  color: 0x90c6f0,
+  wireframe: true,
+  opacity: 0.18,
+  transparent: true,
+});
+
+let renderMode = 'solid'; // 'solid' | 'wireframe' | 'xray'
+
+// ── resize ───────────────────────────────────────────────────────────────────
+function resize() {
+  const w = wrap.clientWidth;
+  const h = wrap.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(wrap);
+resize();
+
+// ── render loop ──────────────────────────────────────────────────────────────
+(function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+})();
+
+// ── load glb ─────────────────────────────────────────────────────────────────
+function loadBlob(blob, name) {
+  const url = URL.createObjectURL(blob);
+  log(`Loading "${name}"…`, 'info');
+
+  gltfLoader.load(
+    url,
+    (gltf) => {
+      URL.revokeObjectURL(url);
+
+      // remove previous model
+      if (currentModel) { scene.remove(currentModel); currentModel = null; }
+      if (anchorGroup)  { scene.remove(anchorGroup);  anchorGroup  = null; }
+      anchorDots = [];
+
+      const model = gltf.scene;
+
+      // ── centre + fit ───────────────────────────────────────────────────
+      const box    = new THREE.Box3().setFromObject(model);
+      const centre = box.getCenter(new THREE.Vector3());
+      const size   = box.getSize(new THREE.Vector3());
+
+      // translate so feet sit on y=0
+      model.position.x -= centre.x;
+      model.position.z -= centre.z;
+      model.position.y -= box.min.y;
+
+      // adjust camera distance to fit
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const fov    = camera.fov * (Math.PI / 180);
+      const dist   = maxDim / (2 * Math.tan(fov / 2)) * 1.5;
+      camera.position.set(0, size.y * 0.5, dist);
+      controls.target.set(0, size.y * 0.45, 0);
+      controls.update();
+
+      // ── apply material ─────────────────────────────────────────────────
+      let verts = 0, tris = 0, objs = 0;
+      model.traverse((node) => {
+        if (node.isMesh) {
+          objs++;
+          node.castShadow    = true;
+          node.receiveShadow = true;
+          applyRenderMode(node);
+          if (node.geometry.attributes.position) verts += node.geometry.attributes.position.count;
+          if (node.geometry.index) tris += node.geometry.index.count / 3;
+          else if (node.geometry.attributes.position) tris += node.geometry.attributes.position.count / 3;
+        }
+      });
+
+      scene.add(model);
+      currentModel = model;
+
+      // ── stats ──────────────────────────────────────────────────────────
+      document.getElementById('stat-verts').textContent   = verts.toLocaleString();
+      document.getElementById('stat-tris').textContent    = Math.round(tris).toLocaleString();
+      document.getElementById('stat-objects').textContent = objs;
+      document.getElementById('stat-bx').textContent      = `${size.x.toFixed(0)} mm`;
+      document.getElementById('stat-by').textContent      = `${size.y.toFixed(0)} mm`;
+      document.getElementById('stat-bz').textContent      = `${size.z.toFixed(0)} mm`;
+
+      // ── anchors (from gltf extras or a sidecar .json if loaded) ───────
+      const extras = gltf.scene.userData.extras || gltf.userData.extras;
+      loadAnchors(extras, model, size);
+
+      document.getElementById('drop-overlay').classList.add('hidden');
+      document.getElementById('filename').textContent = name;
+      log(`Loaded: ${verts.toLocaleString()} verts, ${Math.round(tris).toLocaleString()} tris`, 'ok');
+    },
+    (progress) => {
+      if (progress.total) {
+        const pct = Math.round((progress.loaded / progress.total) * 100);
+        log(`Loading… ${pct}%`, 'info');
+      }
+    },
+    (err) => {
+      URL.revokeObjectURL(url);
+      log(`Error: ${err.message}`, 'err');
+    }
+  );
+}
+
+// ── anchor rendering ─────────────────────────────────────────────────────────
+function loadAnchors(extras, model, size) {
+  const list = document.getElementById('anchor-list');
+  const section = document.getElementById('anchor-section');
+  list.innerHTML = '';
+  anchorDots = [];
+
+  // anchors can be in extras.avatar_anchors (array of {name, position: [x,y,z]})
+  const anchors = extras?.avatar_anchors;
+  if (!anchors || !Array.isArray(anchors) || anchors.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+
+  section.style.display = '';
+  anchorGroup = new THREE.Group();
+  anchorGroup.visible = showAnchors;
+
+  // offset applied to model
+  const box = new THREE.Box3().setFromObject(model);
+  const offsetY = -box.min.y;
+
+  const dotGeo  = new THREE.SphereGeometry(size.y * 0.006, 8, 8);
+  const dotMat  = new THREE.MeshBasicMaterial({ color: 0xf0a030, depthTest: false });
+  const hlMat   = new THREE.MeshBasicMaterial({ color: 0xff4444, depthTest: false });
+
+  anchors.forEach((anchor) => {
+    const pos = anchor.position; // [x, y, z] in mm, Y-up
+    const dot  = new THREE.Mesh(dotGeo, dotMat.clone());
+    dot.position.set(pos[0], pos[1] + offsetY, pos[2]);
+    dot.renderOrder = 999;
+    anchorGroup.add(dot);
+    anchorDots.push({ name: anchor.name, dot });
+
+    // list item
+    const item = document.createElement('div');
+    item.className = 'anchor-item';
+    item.innerHTML = `<div class="dot"></div><span>${anchor.name}</span>`;
+    item.addEventListener('click', () => {
+      // highlight in 3D
+      if (highlightedDot) highlightedDot.material.color.set(0xf0a030);
+      dot.material.color.set(0xff4444);
+      highlightedDot = dot;
+      // orbit to this point
+      controls.target.set(dot.position.x, dot.position.y, dot.position.z);
+      controls.update();
+      // active state
+      list.querySelectorAll('.anchor-item').forEach(el => el.classList.remove('active'));
+      item.classList.add('active');
+    });
+    list.appendChild(item);
+  });
+
+  scene.add(anchorGroup);
+  log(`${anchors.length} anchor(s) loaded`, 'ok');
+}
+
+// ── render mode ──────────────────────────────────────────────────────────────
+function applyRenderMode(mesh) {
+  if (renderMode === 'wireframe') {
+    mesh.material = WIRE_MAT;
+  } else if (renderMode === 'xray') {
+    mesh.material = XRAY_MAT;
+  } else {
+    // solid — use original material if present and has a colour, otherwise use neutral skin tone
+    if (mesh.userData._originalMat) {
+      mesh.material = mesh.userData._originalMat;
+    } else {
+      mesh.userData._originalMat = mesh.material || SOLID_MAT;
+      if (!mesh.material || mesh.material.isMeshBasicMaterial) {
+        mesh.material = SOLID_MAT;
+      }
+    }
+  }
+}
+
+function setRenderMode(mode) {
+  renderMode = mode;
+  document.getElementById('btn-wireframe').classList.toggle('active', mode === 'wireframe');
+  document.getElementById('btn-solid').classList.toggle('active', mode === 'solid');
+  document.getElementById('btn-xray').classList.toggle('active', mode === 'xray');
+
+  if (!currentModel) return;
+  currentModel.traverse((node) => {
+    if (node.isMesh) applyRenderMode(node);
+  });
+}
+
+// ── controls ─────────────────────────────────────────────────────────────────
+document.getElementById('btn-wireframe').addEventListener('click', () => setRenderMode('wireframe'));
+document.getElementById('btn-solid').addEventListener('click',     () => setRenderMode('solid'));
+document.getElementById('btn-xray').addEventListener('click',      () => setRenderMode('xray'));
+
+document.getElementById('btn-reset').addEventListener('click', () => {
+  if (!currentModel) return;
+  const box  = new THREE.Box3().setFromObject(currentModel);
+  const size = box.getSize(new THREE.Vector3());
+  const fov  = camera.fov * (Math.PI / 180);
+  const dist = Math.max(size.x, size.y, size.z) / (2 * Math.tan(fov / 2)) * 1.5;
+  camera.position.set(0, size.y * 0.5, dist);
+  controls.target.set(0, size.y * 0.45, 0);
+  controls.update();
+});
+
+document.getElementById('btn-anchors').addEventListener('click', () => {
+  showAnchors = !showAnchors;
+  document.getElementById('btn-anchors').classList.toggle('active', showAnchors);
+  if (anchorGroup) anchorGroup.visible = showAnchors;
+});
+
+document.getElementById('file-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) loadBlob(file, file.name);
+  e.target.value = '';
+});
+
+// ── drag-and-drop ─────────────────────────────────────────────────────────────
+const dropZone = document.getElementById('canvas-wrap');
+const dragIndicator = document.getElementById('drag-target');
+
+dropZone.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  dragIndicator.classList.add('visible');
+});
+dropZone.addEventListener('dragleave', () => {
+  dragIndicator.classList.remove('visible');
+});
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dragIndicator.classList.remove('visible');
+  const file = e.dataTransfer.files[0];
+  if (file && (file.name.endsWith('.glb') || file.name.endsWith('.gltf'))) {
+    loadBlob(file, file.name);
+  } else {
+    log('Drop a .glb or .gltf file', 'err');
+  }
+});
+
+// ── log ──────────────────────────────────────────────────────────────────────
+function log(msg, type = 'info') {
+  const el = document.getElementById('log');
+  el.innerHTML = `<span class="${type}">${msg}</span>`;
+}
+</script>
+</body>
+</html>
