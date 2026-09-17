@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VENDOR_DATA="$SCRIPT_DIR/../vendor/makehuman/data"
+VENDOR_DATA="$SCRIPT_DIR/../data"
 CLONE_DIR="/tmp/makehuman-src"
 
 echo "Fetching MakeHuman data assets..."
