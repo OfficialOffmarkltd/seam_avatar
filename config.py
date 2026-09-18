@@ -55,6 +55,13 @@ def load_config() -> Config:
                 f"Environment variable {key} must be an integer, got: {val!r}"
             )
 
+    def _validated_port(port: int) -> int:
+        if not (1 <= port <= 65535):
+            raise ConfigError(
+                f"HEALTH_PORT must be in the range 1..65535, got: {port}"
+            )
+        return port
+
     return Config(
         redis_url               = os.environ["REDIS_URL"],
         avatar_cache_bucket     = os.environ["AVATAR_CACHE_BUCKET"],
@@ -68,5 +75,5 @@ def load_config() -> Config:
         job_max_retries         = get_int("JOB_MAX_RETRIES",          3),
         log_level               = os.environ.get("LOG_LEVEL",               "INFO"),
         aws_endpoint_url        = os.environ.get("AWS_ENDPOINT_URL"),
-        health_port             = get_int("HEALTH_PORT", 8081),
+        health_port             = _validated_port(get_int("HEALTH_PORT", 8081)),
     )
