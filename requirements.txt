@@ -1,5 +1,5 @@
 numpy==1.26.4
-scipy==1.13.1
+scipy
 trimesh==4.4.1
 pygltflib==1.16.2
 redis==5.0.7
