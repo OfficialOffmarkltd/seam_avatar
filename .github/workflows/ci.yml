@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [master, dev]
+  pull_request:
+    branches: [master, dev]
+
+jobs:
+  lint-and-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install ruff pyright
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Type check
+        run: pyright .
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run unit tests
+        # Integration tests are excluded — they require MakeHuman data assets
+        # which are not committed to the repo. Run them locally after
+        # executing scripts/fetch_mh_data.sh.
+        # --ignore-glob skips empty test directories; exit code 5 (no tests
+        # collected) is treated as success while the test suite is being built.
+        run: pytest tests/ -m "not integration" --ignore-glob="tests/fixtures/*" || [ $? -eq 5 ]
+
