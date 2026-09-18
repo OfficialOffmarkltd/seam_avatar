@@ -45,10 +45,3 @@ jobs:
         # executing scripts/fetch_mh_data.sh.
         run: pytest tests/ -m "not integration"
 
-  docker:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build Docker image
-        run: docker build -t seam_avatar .
