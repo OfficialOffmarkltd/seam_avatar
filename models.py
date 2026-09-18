@@ -1,35 +1,35 @@
 from dataclasses import dataclass
-from typing import Optional
+
 
 @dataclass
 class BodyMeasurements:
     """
     All fields in float millimetres. None = not provided by user.
     """
-    height: Optional[float]             = None
-    torso_length_back: Optional[float]  = None
-    torso_length_front: Optional[float] = None
-    hip_length: Optional[float]         = None
-    sleeve_length: Optional[float]      = None
-    inseam: Optional[float]             = None
-    outseam: Optional[float]            = None
-    crotch_depth: Optional[float]       = None
-    chest: Optional[float]              = None
-    under_bust: Optional[float]         = None
-    waist: Optional[float]              = None
-    high_hip: Optional[float]           = None
-    full_hip: Optional[float]           = None
-    neck_circumference: Optional[float] = None
-    upper_arm: Optional[float]          = None
-    elbow: Optional[float]              = None
-    wrist: Optional[float]              = None
-    thigh: Optional[float]              = None
-    knee: Optional[float]               = None
-    calf: Optional[float]               = None
-    ankle: Optional[float]              = None
-    shoulder_width: Optional[float]     = None
-    back_width: Optional[float]         = None
-    shoulder_slope: Optional[float]     = None
+    height: float | None             = None
+    torso_length_back: float | None  = None
+    torso_length_front: float | None = None
+    hip_length: float | None         = None
+    sleeve_length: float | None      = None
+    inseam: float | None             = None
+    outseam: float | None            = None
+    crotch_depth: float | None       = None
+    chest: float | None              = None
+    under_bust: float | None         = None
+    waist: float | None              = None
+    high_hip: float | None           = None
+    full_hip: float | None           = None
+    neck_circumference: float | None = None
+    upper_arm: float | None          = None
+    elbow: float | None              = None
+    wrist: float | None              = None
+    thigh: float | None              = None
+    knee: float | None               = None
+    calf: float | None               = None
+    ankle: float | None              = None
+    shoulder_width: float | None     = None
+    back_width: float | None         = None
+    shoulder_slope: float | None     = None
 
     @classmethod
     def from_tmm_dict(cls, d: dict) -> "BodyMeasurements":

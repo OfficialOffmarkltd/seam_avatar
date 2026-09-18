@@ -43,5 +43,7 @@ jobs:
         # Integration tests are excluded — they require MakeHuman data assets
         # which are not committed to the repo. Run them locally after
         # executing scripts/fetch_mh_data.sh.
-        run: pytest tests/ -m "not integration"
+        # --ignore-glob skips empty test directories; exit code 5 (no tests
+        # collected) is treated as success while the test suite is being built.
+        run: pytest tests/ -m "not integration" --ignore-glob="tests/fixtures/*" || [ $? -eq 5 ]
 
