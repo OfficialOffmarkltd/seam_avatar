@@ -57,7 +57,7 @@ class AvatarWorker:
                 # timeout — loop again, allows clean KeyboardInterrupt handling
                 continue
 
-            queue_name, raw_payload = result  # type: ignore[misc]
+            _queue_name, raw_payload = result  # type: ignore[misc]
             self._process_job(raw_payload.decode("utf-8"))
 
     # ── job processing ────────────────────────────────────────────────────────
