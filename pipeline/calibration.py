@@ -96,7 +96,6 @@ def _build_phase1_modifiers(m: BodyMeasurements) -> dict[str, float]:
 # Adjusts a set of universal modifiers to minimise the difference between
 # the mesh's sampled measurements and the target BodyMeasurements.
 # ---------------------------------------------------------------------------
-from __future__ import annotations
 
 import logging
 import math
@@ -105,7 +104,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 from scipy.optimize import minimize
 
-from errors import AvatarError, CALIBRATION_FAILED
+from errors import CALIBRATION_FAILED, AvatarError
 
 if TYPE_CHECKING:
     from pipeline.deform import HeadlessDeformer
@@ -160,7 +159,7 @@ def _target_fields(m: BodyMeasurements) -> list[tuple[str, float]]:
 
 def _objective(
     x: np.ndarray,
-    deformer: "HeadlessDeformer",
+    deformer: HeadlessDeformer,
     phase1_modifiers: dict[str, float],
     target: BodyMeasurements,
 ) -> float:
@@ -193,7 +192,7 @@ def _objective(
 
 def calibrate(
     measurements: BodyMeasurements,
-    deformer: "HeadlessDeformer",
+    deformer: HeadlessDeformer,
     max_seconds: int,
 ) -> tuple[dict[str, float], dict[str, float]]:
     """
@@ -255,9 +254,9 @@ def calibrate(
         logger.warning(
             "Calibration did not fully converge",
             extra={
-                "message":   result.message,
-                "final_sse": final_sse,
-                "residuals": residuals,
+                "optimizer_message": result.message,
+                "final_sse":         final_sse,
+                "residuals":         residuals,
             },
         )
     else:

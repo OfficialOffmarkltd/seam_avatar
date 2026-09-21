@@ -46,7 +46,7 @@ def _redis_host_only(redis_url: str) -> str:
     try:
         parsed = urlparse(redis_url)
         return f"{parsed.hostname}:{parsed.port or 6379}"
-    except Exception:
+    except Exception:  # noqa: BLE001 — any parse error means we return the fallback
         return "(unparseable)"
 
 

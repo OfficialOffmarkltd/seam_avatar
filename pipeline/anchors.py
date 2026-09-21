@@ -3,7 +3,7 @@ import logging
 import numpy as np
 
 from anchor_map import ANCHOR_MAP
-from errors import AvatarError, ANCHOR_EXTRACT_FAILED
+from errors import ANCHOR_EXTRACT_FAILED, AvatarError
 from models import AvatarAnchor
 
 logger = logging.getLogger(__name__)

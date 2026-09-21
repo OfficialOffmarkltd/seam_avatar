@@ -1,17 +1,16 @@
 import json
-import logging
 import time
 
 import redis
 import structlog
 
 from config import Config
-from errors import AvatarError, INVALID_PAYLOAD
+from errors import INVALID_PAYLOAD, AvatarError
 from models import BodyMeasurements, JobPayload, JobResult
-from pipeline.hash import compute_profile_hash
 from pipeline.anchors import extract_anchors
-from pipeline.export import export_gltf
 from pipeline.calibration import calibrate
+from pipeline.export import export_gltf
+from pipeline.hash import compute_profile_hash
 from storage.cache import S3CacheClient
 from storage.events import RedisEventEmitter
 
@@ -46,7 +45,7 @@ class AvatarWorker:
         while True:
             try:
                 result = self._redis.blpop(
-                    self._config.redis_queue_name,
+                    [self._config.redis_queue_name],
                     timeout=5,
                 )
             except redis.ConnectionError as e:
@@ -58,7 +57,7 @@ class AvatarWorker:
                 # timeout — loop again, allows clean KeyboardInterrupt handling
                 continue
 
-            _, raw_payload = result
+            queue_name, raw_payload = result  # type: ignore[misc]
             self._process_job(raw_payload.decode("utf-8"))
 
     # ── job processing ────────────────────────────────────────────────────────
@@ -90,7 +89,6 @@ class AvatarWorker:
             measurements = payload.measurements
 
             # Step 3 — compute profile hash
-            t0 = time.monotonic()
             profile_hash = compute_profile_hash(measurements)
             self._log.info("Profile hash computed", hash=profile_hash[:12] + "…")
 
@@ -176,7 +174,7 @@ class AvatarWorker:
         except AvatarError as e:
             self._handle_failure(job_id, profile_id, raw_payload, e.code, e.detail)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 — catch-all so worker loop never dies
             self._handle_failure(job_id, profile_id, raw_payload, "INTERNAL_ERROR", str(e))
 
         finally:
@@ -254,7 +252,7 @@ class AvatarWorker:
         count = self._redis.incr(key)
         # Expire after 24 hours so stale counters don't accumulate
         self._redis.expire(key, 86400)
-        return int(count)
+        return int(count)  # type: ignore[arg-type]
 
     def _move_to_dead_letter(self, raw_payload: str, reason: str) -> None:
         """Push the raw payload to the dead-letter queue and log at ERROR."""

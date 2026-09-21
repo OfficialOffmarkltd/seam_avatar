@@ -22,10 +22,10 @@ Workflow:
     6. When all dots look correct, copy the printed ANCHOR_MAP into anchor_map.py
 """
 
-import sys
-import os
 import json
+import os
 import struct
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -90,12 +90,13 @@ def load_mesh(data_path: str) -> tuple[np.ndarray, np.ndarray]:
         sys.exit(1)
 
     print(f"Loading mesh from {obj_path} ...")
-    mesh = trimesh.load(str(obj_path), force="mesh")
+    loaded = trimesh.load(str(obj_path), force="mesh")
+    mesh: trimesh.Trimesh = loaded  # type: ignore[assignment]
     verts = np.array(mesh.vertices, dtype=np.float32)
     faces = np.array(mesh.faces,    dtype=np.uint32)
 
     print(f"  {len(verts)} vertices, {len(faces)} faces")
-    print(f"  Raw units (dm):")
+    print("  Raw units (dm):")
     print(f"    X: {verts[:, 0].min():.3f} to {verts[:, 0].max():.3f}")
     print(f"    Y: {verts[:, 1].min():.3f} to {verts[:, 1].max():.3f}")
     print(f"    Z: {verts[:, 2].min():.3f} to {verts[:, 2].max():.3f}")

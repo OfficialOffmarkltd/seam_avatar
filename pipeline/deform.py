@@ -1,7 +1,7 @@
-import os
-import sys
 import json
 import logging
+import os
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -29,7 +29,8 @@ class HeadlessDeformer:
         # Load base mesh
         obj_path = Path(makehuman_data_path) / "3dobjs" / "base.obj"
         logger.info(f"Loading base mesh from {obj_path}")
-        mesh = trimesh.load(str(obj_path), force="mesh")
+        loaded = trimesh.load(str(obj_path), force="mesh")
+        mesh: trimesh.Trimesh = loaded  # type: ignore[assignment]  # force="mesh" guarantees Trimesh
 
         vertices = np.array(mesh.vertices, dtype=np.float32)
         faces    = np.array(mesh.faces,    dtype=np.uint32)

@@ -4,7 +4,7 @@ import struct
 
 import numpy as np
 
-from errors import AvatarError, EXPORT_FAILED
+from errors import EXPORT_FAILED, AvatarError
 from models import AvatarAnchor
 
 logger = logging.getLogger(__name__)
