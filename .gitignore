@@ -2,3 +2,5 @@
 vendor/makehuman/data
 
 **/*/__pycache__
+
+.env

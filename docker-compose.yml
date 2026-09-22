@@ -1,0 +1,83 @@
+services:
+
+  # ── seam_avatar ─────────────────────────────────────────────────────────────
+  seam_avatar:
+    build: .
+    depends_on:
+      redis:
+        condition: service_healthy
+      localstack:
+        condition: service_healthy
+    environment:
+      # Required
+      REDIS_URL:             redis://redis:6379/0
+      AVATAR_CACHE_BUCKET:   seam-avatar-cache
+      MAKEHUMAN_DATA_PATH:   /app/vendor/makehuman/data
+      AWS_REGION:            us-east-1
+      # LocalStack S3 override — remove in production
+      AWS_ENDPOINT_URL:      http://localstack:4566
+      AWS_ACCESS_KEY_ID:     test
+      AWS_SECRET_ACCESS_KEY: test
+      # Optional — override defaults if needed
+      LOG_LEVEL:             INFO
+      CALIBRATION_MAX_SECONDS: "5"
+      JOB_MAX_RETRIES:       "3"
+      HEALTH_PORT:           "8081"
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test: ["CMD", "python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8081/health/ready')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s   # allow time for MakeHuman data to load on cold start
+    restart: on-failure
+
+  # ── redis ────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # ── localstack (S3) ──────────────────────────────────────────────────────────
+  localstack:
+    image: localstack/localstack:latest
+    environment:
+      SERVICES:        s3
+      DEFAULT_REGION:  us-east-1
+      EAGER_SERVICE_LOADING: "1"
+    ports:
+      - "4566:4566"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+    volumes:
+      - localstack_data:/var/lib/localstack
+
+  # ── localstack init ──────────────────────────────────────────────────────────
+  # Creates the S3 bucket on first startup so seam_avatar can upload immediately.
+  localstack_init:
+    image: amazon/aws-cli:latest
+    depends_on:
+      localstack:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID:     test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_DEFAULT_REGION:    us-east-1
+    entrypoint: >
+      aws --endpoint-url=http://localstack:4566 s3 mb s3://seam-avatar-cache
+      --region us-east-1
+    restart: "no"
+
+volumes:
+  localstack_data:
