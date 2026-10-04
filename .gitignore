@@ -1,4 +1,6 @@
 .kiro
 vendor/makehuman/data
 
-**/*/__pycache__
+__pycache__
+
+.env
