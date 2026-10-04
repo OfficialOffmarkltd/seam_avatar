@@ -123,6 +123,23 @@
       border: 2px dashed #3a7fc1;
       pointer-events: none;
     }
+
+    #anchor-tooltip {
+      position: absolute;
+      z-index: 20;
+      display: none;
+      min-width: 185px;
+      padding: 8px 10px;
+      border: 1px solid #4ddcff;
+      border-radius: 4px;
+      background: rgba(12, 18, 24, 0.94);
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+      color: #e8f5ff;
+      font: 12px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      pointer-events: none;
+      white-space: pre-line;
+    }
+    #anchor-tooltip strong { color: #4ddcff; font-family: inherit; }
     #drag-target.visible { display: block; }
 
     /* ── info panel ── */
@@ -227,6 +244,7 @@
       <small>or use the Load button above</small>
     </div>
     <div id="drag-target"></div>
+    <div id="anchor-tooltip" role="status"></div>
   </div>
 
   <!-- right panel -->
@@ -342,7 +360,12 @@ let currentModel    = null;
 let anchorGroup     = null;
 let anchorDots      = [];
 let showAnchors     = false;
-let highlightedDot  = null;
+let selectedAnchor  = null;
+let hoveredAnchor   = null;
+
+const raycaster = new THREE.Raycaster();
+const pointer   = new THREE.Vector2();
+const tooltip   = document.getElementById('anchor-tooltip');
 
 const SOLID_MAT = new THREE.MeshStandardMaterial({
   color: 0xc8a882,
@@ -394,6 +417,9 @@ function loadBlob(blob, name) {
       if (currentModel) { scene.remove(currentModel); currentModel = null; }
       if (anchorGroup)  { scene.remove(anchorGroup);  anchorGroup  = null; }
       anchorDots = [];
+      selectedAnchor = null;
+      hoveredAnchor = null;
+      hideAnchorTooltip();
 
       const model = gltf.scene;
 
@@ -490,7 +516,6 @@ function loadAnchors(extras, model, size) {
 
   const dotGeo  = new THREE.SphereGeometry(size.y * 0.006, 8, 8);
   const dotMat  = new THREE.MeshBasicMaterial({ color: 0xf0a030, depthTest: false });
-  const hlMat   = new THREE.MeshBasicMaterial({ color: 0xff4444, depthTest: false });
 
   anchors.forEach((anchor) => {
     const pos = anchor.position; // [x, y, z] in mm, Y-up
@@ -500,17 +525,23 @@ function loadAnchors(extras, model, size) {
     dot.position.set(pos[0], pos[1] + offsetY, pos[2]);
     dot.renderOrder = 999;
     anchorGroup.add(dot);
-    anchorDots.push({ name: anchor.name, dot });
+    const anchorInfo = {
+      name: anchor.name,
+      vertexIndex: anchor.vertex_index ?? null,
+      position: pos,
+      dot,
+      item: null,
+    };
+    dot.userData.anchorInfo = anchorInfo;
+    anchorDots.push(anchorInfo);
 
     // list item
     const item = document.createElement('div');
     item.className = 'anchor-item';
     item.innerHTML = `<div class="dot"></div><span>${anchor.name}</span>`;
     item.addEventListener('click', () => {
-      // highlight in 3D
-      if (highlightedDot) highlightedDot.material.color.set(0xf0a030);
-      dot.material.color.set(0xff4444);
-      highlightedDot = dot;
+      selectedAnchor = anchorInfo;
+      updateAnchorHighlights();
       // orbit to this point
       controls.target.set(dot.position.x, dot.position.y, dot.position.z);
       controls.update();
@@ -518,11 +549,51 @@ function loadAnchors(extras, model, size) {
       list.querySelectorAll('.anchor-item').forEach(el => el.classList.remove('active'));
       item.classList.add('active');
     });
+    item.addEventListener('mouseenter', (event) => showAnchorTooltip(anchorInfo, event));
+    item.addEventListener('mouseleave', clearHoveredAnchor);
+    anchorInfo.item = item;
     list.appendChild(item);
   });
 
   scene.add(anchorGroup);
   log(`${anchors.length} anchor(s) loaded`, 'ok');
+}
+
+function updateAnchorHighlights() {
+  anchorDots.forEach((anchor) => {
+    const color = anchor === selectedAnchor ? 0xff4444
+      : anchor === hoveredAnchor ? 0x4ddcff
+      : 0xf0a030;
+    anchor.dot.material.color.set(color);
+  });
+}
+
+function showAnchorTooltip(anchor, event) {
+  hoveredAnchor = anchor;
+  updateAnchorHighlights();
+
+  const [x, y, z] = anchor.position;
+  const indexText = anchor.vertexIndex === null
+    ? 'Vertex index: not embedded'
+    : `Vertex index: ${anchor.vertexIndex}`;
+  tooltip.innerHTML = `<strong>${anchor.name}</strong>\n${indexText}\nPosition: ${x.toFixed(1)}, ${y.toFixed(1)}, ${z.toFixed(1)} mm`;
+  tooltip.style.display = 'block';
+
+  const rect = wrap.getBoundingClientRect();
+  const left = Math.min(event.clientX - rect.left + 14, rect.width - tooltip.offsetWidth - 8);
+  const top = Math.min(event.clientY - rect.top + 14, rect.height - tooltip.offsetHeight - 8);
+  tooltip.style.left = `${Math.max(8, left)}px`;
+  tooltip.style.top = `${Math.max(8, top)}px`;
+}
+
+function hideAnchorTooltip() {
+  tooltip.style.display = 'none';
+}
+
+function clearHoveredAnchor() {
+  hoveredAnchor = null;
+  updateAnchorHighlights();
+  hideAnchorTooltip();
 }
 
 // ── render mode ──────────────────────────────────────────────────────────────
@@ -576,7 +647,29 @@ document.getElementById('btn-anchors').addEventListener('click', () => {
   showAnchors = !showAnchors;
   document.getElementById('btn-anchors').classList.toggle('active', showAnchors);
   if (anchorGroup) anchorGroup.visible = showAnchors;
+  if (!showAnchors) clearHoveredAnchor();
 });
+
+canvas.addEventListener('pointermove', (event) => {
+  if (!anchorGroup || !anchorGroup.visible) return;
+
+  const rect = canvas.getBoundingClientRect();
+  pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+
+  const hit = raycaster.intersectObjects(anchorGroup.children, false)[0];
+  if (!hit) {
+    if (hoveredAnchor) clearHoveredAnchor();
+    return;
+  }
+
+  const anchor = hit.object.userData.anchorInfo;
+  if (anchor && anchor !== hoveredAnchor) showAnchorTooltip(anchor, event);
+  else if (anchor) showAnchorTooltip(anchor, event);
+});
+
+canvas.addEventListener('pointerleave', clearHoveredAnchor);
 
 document.getElementById('file-input').addEventListener('change', (e) => {
   const file = e.target.files[0];

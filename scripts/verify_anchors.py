@@ -29,7 +29,12 @@ import sys
 from pathlib import Path
 
 import numpy as np
-import trimesh
+
+# Make the repository root importable when invoked as
+# ``python scripts/verify_anchors.py``.
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from pipeline.deform import load_base_body_mesh
 
 # ---------------------------------------------------------------------------
 # Configuration — set MAKEHUMAN_DATA_PATH or edit this directly
@@ -51,31 +56,31 @@ CANDIDATE_POSITIONS: dict[str, list[float]] = {
     # Mesh is centred at Y=0. Head top ≈ +8.5dm, feet ≈ -8.5dm.
     # Waist is near Y=0, chest ≈ +2.5dm, shoulders ≈ +5.5dm, neck ≈ +6.5dm
     # All values in decimetres (raw base.obj units).
-    "neck_base_front":    [ 0.00,  6.50,  0.55],
-    "neck_base_back":     [ 0.00,  6.50, -0.45],
-    "neck_base_left":     [-0.35,  6.50,  0.05],
-    "neck_base_right":    [ 0.35,  6.50,  0.05],
-    "left_shoulder":      [-1.40,  5.50,  0.05],
-    "right_shoulder":     [ 1.40,  5.50,  0.05],
-    "left_underarm":      [-1.50,  4.20,  0.10],
-    "right_underarm":     [ 1.50,  4.20,  0.10],
-    "chest_front_centre": [ 0.00,  3.20,  1.10],
-    "chest_back_centre":  [ 0.00,  3.20, -0.80],
-    "left_chest_side":    [-1.60,  3.20,  0.15],
-    "right_chest_side":   [ 1.60,  3.20,  0.15],
-    "waist_front":        [ 0.00,  0.50,  0.90],
-    "waist_back":         [ 0.00,  0.50, -0.65],
-    "waist_left":         [-1.30,  0.50,  0.10],
-    "waist_right":        [ 1.30,  0.50,  0.10],
-    "hip_front":          [ 0.00, -1.20,  1.10],
-    "hip_back":           [ 0.00, -1.20, -0.80],
-    "hip_left":           [-1.80, -1.20,  0.10],
-    "hip_right":          [ 1.80, -1.20,  0.10],
-    "crotch_point":       [ 0.00, -2.80,  0.20],
-    "left_knee":          [-0.80, -5.00,  0.20],
-    "right_knee":         [ 0.80, -5.00,  0.20],
-    "left_wrist":         [-3.80,  0.20,  0.10],
-    "right_wrist":        [ 3.80,  0.20,  0.10],
+    "neck_base_front":    [ 0.00,  5.75,  0.55],
+    "neck_base_back":     [ 0.00,  5.75, -0.45],
+    "neck_base_left":     [-0.35,  5.75,  0.05],
+    "neck_base_right":    [ 0.35,  5.75,  0.05],
+    "left_shoulder":      [-1.40,  5.30,  0.05],
+    "right_shoulder":     [ 1.40,  5.30,  0.05],
+    "left_underarm":      [-1.50,  4.50,  0.10],
+    "right_underarm":     [ 1.50,  4.50,  0.10],
+    "chest_front_centre": [ 0.00,  3.50,  1.10],
+    "chest_back_centre":  [ 0.00,  3.50, -0.80],
+    "left_chest_side":    [-1.60,  3.50,  0.15],
+    "right_chest_side":   [ 1.60,  3.50,  0.15],
+    "waist_front":        [ 0.00,  2.10,  0.90],
+    "waist_back":         [ 0.00,  2.10, -0.65],
+    "waist_left":         [-1.30,  2.10,  0.10],
+    "waist_right":        [ 1.30,  2.10,  0.10],
+    "hip_front":          [ 0.00,  0.50,  1.10],
+    "hip_back":           [ 0.00,  0.50, -0.80],
+    "hip_left":           [-1.30,  0.50,  0.10],
+    "hip_right":          [ 1.30,  0.50,  0.10],
+    "crotch_point":       [ 0.00,  0.25,  0.90],
+    "left_knee":          [-1.65, -3.90,  0.20],
+    "right_knee":         [ 1.65, -3.90,  0.20],
+    "left_wrist":         [-8.60,  3.60,  -0.80],
+    "right_wrist":        [ 8.60,  3.60,  -0.80],
 }
 
 
@@ -90,12 +95,9 @@ def load_mesh(data_path: str) -> tuple[np.ndarray, np.ndarray]:
         sys.exit(1)
 
     print(f"Loading mesh from {obj_path} ...")
-    loaded = trimesh.load(str(obj_path), force="mesh")
-    mesh: trimesh.Trimesh = loaded  # type: ignore[assignment]
-    verts = np.array(mesh.vertices, dtype=np.float32)
-    faces = np.array(mesh.faces,    dtype=np.uint32)
+    verts, faces = load_base_body_mesh(obj_path)
 
-    print(f"  {len(verts)} vertices, {len(faces)} faces")
+    print(f"  {len(verts)} vertices, {len(faces)} body faces")
     print("  Raw units (dm):")
     print(f"    X: {verts[:, 0].min():.3f} to {verts[:, 0].max():.3f}")
     print(f"    Y: {verts[:, 1].min():.3f} to {verts[:, 1].max():.3f}")
@@ -109,6 +111,7 @@ def load_mesh(data_path: str) -> tuple[np.ndarray, np.ndarray]:
 # ---------------------------------------------------------------------------
 def find_anchors(
     verts: np.ndarray,
+    faces: np.ndarray,
     candidates: dict[str, list[float]],
 ) -> dict[str, dict]:
     """
@@ -122,13 +125,21 @@ def find_anchors(
     y_offset_dm = float(abs(verts[:, 1].min()))
     print(f"\n  Y offset to floor: {y_offset_dm:.3f} dm ({y_offset_dm * 100:.1f} mm)")
 
+    # Search only anatomical-body vertices.  The source OBJ includes helper
+    # geometry (skirt, hair, eyes, joints, etc.); choosing one of those points
+    # creates an anchor that is not on the avatar surface exported by the
+    # service.
+    body_indices = np.unique(faces.reshape(-1))
+    body_verts = verts[body_indices]
+
     anchors = {}
-    print("\nSearching for anchor vertices ...")
+    print(f"\nSearching {len(body_indices)} body-surface vertices ...")
 
     for name, target in candidates.items():
         t = np.array(target, dtype=np.float32)
-        distances = np.linalg.norm(verts - t, axis=1)
-        idx = int(np.argmin(distances))
+        distances = np.linalg.norm(body_verts - t, axis=1)
+        nearest_position = int(np.argmin(distances))
+        idx = int(body_indices[nearest_position])
         pos_dm = verts[idx].tolist()
 
         # Shift Y by the floor offset, convert to mm
@@ -142,7 +153,7 @@ def find_anchors(
             "index":       idx,
             "position_dm": pos_dm,
             "position_mm": pos_mm,
-            "distance":    float(distances[idx]),
+            "distance":    float(distances[nearest_position]),
         }
 
         print(
@@ -198,6 +209,7 @@ def export_glb(
         {
             "name":     name,
             "position": info["position_mm"],
+            "vertex_index": info["index"],
         }
         for name, info in anchors.items()
     ]
@@ -303,6 +315,6 @@ if __name__ == "__main__":
     print(f"MAKEHUMAN_DATA_PATH: {MAKEHUMAN_DATA_PATH}\n")
 
     verts, faces = load_mesh(MAKEHUMAN_DATA_PATH)
-    anchors = find_anchors(verts, CANDIDATE_POSITIONS)
+    anchors = find_anchors(verts, faces, CANDIDATE_POSITIONS)
     print_anchor_map(anchors)
     export_glb(verts, faces, anchors, OUTPUT_GLB)

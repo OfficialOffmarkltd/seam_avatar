@@ -5,9 +5,68 @@ import sys
 from pathlib import Path
 
 import numpy as np
-import trimesh
 
 logger = logging.getLogger(__name__)
+
+
+def load_base_body_mesh(obj_path: Path) -> tuple[np.ndarray, np.ndarray]:
+    """Load only MakeHuman's anatomical ``body`` faces from ``base.obj``.
+
+    MakeHuman's base OBJ also contains helper geometry (hair, skirt, tights,
+    eyes, teeth, skeleton joints, and similar authoring aids).  Those faces
+    are useful to the desktop application but must never be part of Seam's
+    avatar surface.  This small OBJ reader deliberately preserves the original
+    vertex array and face indices: morph targets, ruler paths, and ANCHOR_MAP
+    all use MakeHuman's original vertex numbering.
+    """
+    vertices: list[list[float]] = []
+    body_faces: list[list[int]] = []
+    active_group: str | None = None
+
+    try:
+        with obj_path.open(encoding="utf-8") as obj_file:
+            for line in obj_file:
+                parts = line.split()
+                if not parts or parts[0].startswith("#"):
+                    continue
+
+                if parts[0] == "v":
+                    if len(parts) < 4:
+                        raise RuntimeError(f"Malformed vertex in {obj_path}")
+                    vertices.append([float(parts[1]), float(parts[2]), float(parts[3])])
+                elif parts[0] == "g":
+                    active_group = parts[1] if len(parts) > 1 else None
+                elif parts[0] == "f" and active_group == "body":
+                    # OBJ indices are one-based. MakeHuman stores its body as
+                    # quads, while glTF requires triangles. Fan triangulation
+                    # retains every original vertex index and winding order.
+                    if len(parts) < 4:
+                        raise RuntimeError(f"Malformed body face in {obj_path}: {line.strip()}")
+                    face: list[int] = []
+                    for value in parts[1:]:
+                        raw_index = int(value.split("/", maxsplit=1)[0])
+                        index = raw_index - 1 if raw_index > 0 else len(vertices) + raw_index
+                        if not 0 <= index < len(vertices):
+                            raise RuntimeError(
+                                f"Body face references invalid vertex {raw_index} in {obj_path}"
+                            )
+                        face.append(index)
+                    body_faces.extend(
+                        [face[0], face[position], face[position + 1]]
+                        for position in range(1, len(face) - 1)
+                    )
+    except OSError as exc:
+        raise RuntimeError(f"Unable to read MakeHuman base mesh {obj_path}: {exc}") from exc
+
+    if not vertices:
+        raise RuntimeError(f"No vertices found in MakeHuman base mesh {obj_path}")
+    if not body_faces:
+        raise RuntimeError(f"No 'body' faces found in MakeHuman base mesh {obj_path}")
+
+    return (
+        np.asarray(vertices, dtype=np.float32),
+        np.asarray(body_faces, dtype=np.uint32),
+    )
 
 
 class HeadlessDeformer:
@@ -29,11 +88,7 @@ class HeadlessDeformer:
         # Load base mesh
         obj_path = Path(makehuman_data_path) / "3dobjs" / "base.obj"
         logger.info(f"Loading base mesh from {obj_path}")
-        loaded = trimesh.load(str(obj_path), force="mesh")
-        mesh: trimesh.Trimesh = loaded  # type: ignore[assignment]  # force="mesh" guarantees Trimesh
-
-        vertices = np.array(mesh.vertices, dtype=np.float32)
-        faces    = np.array(mesh.faces,    dtype=np.uint32)
+        vertices, faces = load_base_body_mesh(obj_path)
 
         # MakeHuman stores vertices in decimetres (1 unit = 10cm)
         # Multiply by 100 to convert to millimetres
@@ -57,6 +112,23 @@ class HeadlessDeformer:
             raise RuntimeError(
                 f"Base mesh has only {len(faces)} faces — minimum is 5000. "
                 f"Data may be incomplete."
+            )
+
+        # Anchors are part of the public avatar contract.  They must identify
+        # vertices on the rendered anatomical surface, never a vertex used only
+        # by MakeHuman helper geometry that is deliberately excluded above.
+        from anchor_map import ANCHOR_MAP
+
+        body_vertex_indices = set(faces.reshape(-1).tolist())
+        non_surface_anchors = [
+            name for name, index in ANCHOR_MAP.items()
+            if index not in body_vertex_indices
+        ]
+        if non_surface_anchors:
+            raise RuntimeError(
+                "ANCHOR_MAP contains vertices outside the exported body surface: "
+                f"{', '.join(non_surface_anchors)}. "
+                "Re-run scripts/verify_anchors.py and select only body-surface anchors."
             )
 
         # Load compiled morph target archive
@@ -101,7 +173,15 @@ class HeadlessDeformer:
                 continue
 
             for target_path, target_weight in targets:
-                final_weight = value * target_weight
+                # Bidirectional universal modifiers use a signed value:
+                # +1 applies only the ``incr`` target and -1 applies only the
+                # ``decr`` target.  The modifier table marks the latter with
+                # a negative target weight.  Applying both targets at once
+                # doubles the deformation and is not MakeHuman semantics.
+                if target_weight < 0:
+                    final_weight = max(-value, 0.0)
+                else:
+                    final_weight = max(value, 0.0) * target_weight
                 if abs(final_weight) < 1e-6:
                     continue  # negligible contribution — skip
 
@@ -162,7 +242,10 @@ class HeadlessDeformer:
             return
 
         vert_indices  = self._npz[index_key]            # uint32 array of vertex indices
-        displacements = self._npz[vector_key] * 1e-3    # int16 stored as int16*1000
+        # Archive vectors decode to MakeHuman's decimetre units via ``* 1e-3``.
+        # This deformer stores vertices in millimetres, so convert dm → mm too:
+        # 1e-3 * 100 = 1e-1.
+        displacements = self._npz[vector_key] * 1e-1
 
         # Pure numpy indexed assignment — no Python loop over vertices
         self._current_verts[vert_indices] += displacements * weight
@@ -217,9 +300,10 @@ class HeadlessDeformer:
                         max_ext = mdef.get("max")
 
                         if min_ext and max_ext:
-                            # Bidirectional: value < 0.5 → min target, > 0.5 → max target
+                            # Bidirectional: apply only the target selected by
+                            # the signed modifier value in apply_modifiers().
                             entries.append((f"targets/{target_base}-{min_ext}", -1.0))
-                            entries.append((f"targets/{target_base}-{max_ext}",  1.0))
+                            entries.append((f"targets/{target_base}-{max_ext}", 1.0))
                         else:
                             # Unidirectional: value directly weights this target
                             entries.append((f"targets/{target_base}", 1.0))

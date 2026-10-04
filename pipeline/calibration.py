@@ -1,20 +1,217 @@
 from __future__ import annotations
 
+from itertools import pairwise
+
+from anchor_map import ANCHOR_MAP
 from models import BodyMeasurements
+
 
 # ---------------------------------------------------------------------------
 # Measurement vertex pairs
-# Populated in Task 4.2 after MakeHuman exploratory work.
-# Each entry is a list of (vertex_i, vertex_j) pairs whose Euclidean distances
-# sum to approximate the circumference of that body region.
+# MakeHuman's Ruler.Measures paths from
+# makehuman/plugins/0_modeling_a_measurement.py.  Each path is an ordered
+# surface route; pairwise(route) converts it into the line segments that
+# MakeHuman itself sums for its on-screen measurement ruler.
 # ---------------------------------------------------------------------------
+def _adjacent_pairs(route: tuple[int, ...]) -> list[tuple[int, int]]:
+    return list(pairwise(route))
+
+
 MEASUREMENT_VERTEX_PAIRS: dict[str, list[tuple[int, int]]] = {
-    "chest":          [],   # TODO: fill in Task 4.2
-    "waist":          [],   # TODO: fill in Task 4.2
-    "full_hip":       [],   # TODO: fill in Task 4.2
-    "shoulder_width": [],   # TODO: fill in Task 4.2
-    "upper_arm":      [],   # TODO: fill in Task 4.2
-    "thigh":          [],   # TODO: fill in Task 4.2
+    # measure/measure-bust-circ-decr|incr
+    "chest": _adjacent_pairs(
+        (
+            8439,
+            8455,
+            8462,
+            8446,
+            8478,
+            8494,
+            8557,
+            8510,
+            8526,
+            8542,
+            10720,
+            10601,
+            10603,
+            10602,
+            10612,
+            10611,
+            10610,
+            10613,
+            10604,
+            10605,
+            10606,
+            3942,
+            3941,
+            3940,
+            3950,
+            3947,
+            3948,
+            3949,
+            3938,
+            3939,
+            3937,
+            4065,
+            1870,
+            1854,
+            1838,
+            1885,
+            1822,
+            1806,
+            1774,
+            1790,
+            1783,
+            1767,
+            1799,
+            8471,
+        )
+    ),
+    # measure/measure-waist-circ-decr|incr
+    "waist": _adjacent_pairs(
+        (
+            4121,
+            10760,
+            10757,
+            10777,
+            10776,
+            10779,
+            10780,
+            10778,
+            10781,
+            10771,
+            10773,
+            10772,
+            10775,
+            10774,
+            10814,
+            10834,
+            10816,
+            10817,
+            10818,
+            10819,
+            10820,
+            10821,
+            4181,
+            4180,
+            4179,
+            4178,
+            4177,
+            4176,
+            4175,
+            4196,
+            4173,
+            4131,
+            4132,
+            4129,
+            4130,
+            4128,
+            4138,
+            4135,
+            4137,
+            4136,
+            4133,
+            4134,
+            4108,
+            4113,
+            4118,
+            4121,
+        )
+    ),
+    # measure/measure-hips-circ-decr|incr
+    "full_hip": _adjacent_pairs(
+        (
+            4341,
+            10968,
+            10969,
+            10971,
+            10970,
+            10967,
+            10928,
+            10927,
+            10925,
+            10926,
+            10923,
+            10924,
+            10868,
+            10875,
+            10861,
+            10862,
+            4228,
+            4227,
+            4226,
+            4242,
+            4234,
+            4294,
+            4293,
+            4296,
+            4295,
+            4297,
+            4298,
+            4342,
+            4345,
+            4346,
+            4344,
+            4343,
+            4361,
+            4341,
+        )
+    ),
+    # Seam's shoulder width is the distance between its selected shoulder
+    # landmarks, rather than MakeHuman's single-side shoulder-length ruler.
+    "shoulder_width": [
+        (ANCHOR_MAP["left_shoulder"], ANCHOR_MAP["right_shoulder"]),
+    ],
+    # measure/measure-upperarm-circ-decr|incr
+    "upper_arm": _adjacent_pairs(
+        (
+            8383,
+            8393,
+            8392,
+            8391,
+            8390,
+            8394,
+            8395,
+            8399,
+            10455,
+            10516,
+            8396,
+            8397,
+            8398,
+            8388,
+            8387,
+            8386,
+            10431,
+            8385,
+            8384,
+            8389,
+        )
+    ),
+    # measure/measure-thigh-circ-decr|incr
+    "thigh": _adjacent_pairs(
+        (
+            11071,
+            11080,
+            11081,
+            11086,
+            11076,
+            11077,
+            11074,
+            11075,
+            11072,
+            11073,
+            11069,
+            11070,
+            11087,
+            11085,
+            11084,
+            12994,
+            11083,
+            11082,
+            11079,
+            11071,
+        )
+    ),
 }
 
 # ---------------------------------------------------------------------------
@@ -57,7 +254,7 @@ def gender_from_proportions(
     if full_hip <= 0.0:
         return 0.5  # can't divide — return neutral
 
-    bust_hip     = chest        / full_hip
+    bust_hip = chest / full_hip
     shoulder_hip = shoulder_width / full_hip
 
     # Blend: bust/hip contributes 60%, shoulder/hip inversion contributes 40%
@@ -85,11 +282,12 @@ def _build_phase1_modifiers(m: BodyMeasurements) -> dict[str, float]:
     return {
         # MakeHuman modifier full names as used in modeling_modifiers.json
         "macrodetails-height/Height": height_val,
-        "macrodetails/Gender":        gender_val,
-        "macrodetails/Age":           0.5,   # fixed — not in BodyMeasurements
+        "macrodetails/Gender": gender_val,
+        "macrodetails/Age": 0.5,  # fixed — not in BodyMeasurements
         "macrodetails-universal/Weight": 0.5,  # seed for Phase 2 optimisation
         "macrodetails-universal/Muscle": 0.5,  # seed for Phase 2 optimisation
     }
+
 
 # ---------------------------------------------------------------------------
 # Phase 2 — L-BFGS-B optimisation
@@ -121,23 +319,23 @@ logger = logging.getLogger(__name__)
 OPTIMISED_MODIFIERS: list[str] = [
     "macrodetails-universal/Weight",
     "macrodetails-universal/Muscle",
-    "measure/bust-decrease|increase",
-    "measure/waist-decrease|increase",
-    "measure/hips-decrease|increase",
-    "measure/upperarm-decrease|increase",
-    "measure/thigh-decrease|increase",
+    "measure/measure-bust-circ-decr|incr",
+    "measure/measure-waist-circ-decr|incr",
+    "measure/measure-hips-circ-decr|incr",
+    "measure/measure-upperarm-circ-decr|incr",
+    "measure/measure-thigh-circ-decr|incr",
 ]
 
 # Bounds for each optimised modifier: (min, max)
 # Macro modifiers are [0.0, 1.0]; universal modifiers are [-1.0, 1.0]
 BOUNDS: list[tuple[float, float]] = [
-    (0.0,  1.0),   # Weight
-    (0.0,  1.0),   # Muscle
-    (-1.0, 1.0),   # bust
-    (-1.0, 1.0),   # waist
-    (-1.0, 1.0),   # hips
-    (-1.0, 1.0),   # upperarm
-    (-1.0, 1.0),   # thigh
+    (0.0, 1.0),  # Weight
+    (0.0, 1.0),  # Muscle
+    (-1.0, 1.0),  # bust
+    (-1.0, 1.0),  # waist
+    (-1.0, 1.0),  # hips
+    (-1.0, 1.0),  # upperarm
+    (-1.0, 1.0),  # thigh
 ]
 
 
@@ -147,12 +345,12 @@ def _target_fields(m: BodyMeasurements) -> list[tuple[str, float]]:
     is present (not None). These are the fields included in the error function.
     """
     mapping = {
-        "chest":          m.chest,
-        "waist":          m.waist,
-        "full_hip":       m.full_hip,
+        "chest": m.chest,
+        "waist": m.waist,
+        "full_hip": m.full_hip,
         "shoulder_width": m.shoulder_width,
-        "upper_arm":      m.upper_arm,
-        "thigh":          m.thigh,
+        "upper_arm": m.upper_arm,
+        "thigh": m.thigh,
     }
     return [(k, v) for k, v in mapping.items() if v is not None]
 
@@ -209,9 +407,9 @@ def calibrate(
     phase1 = _build_phase1_modifiers(measurements)
 
     # Initial point: phase1 values for the optimised modifiers, else 0.5
-    x0 = np.array([
-        phase1.get(name, 0.5) for name in OPTIMISED_MODIFIERS
-    ], dtype=np.float64)
+    x0 = np.array(
+        [phase1.get(name, 0.5) for name in OPTIMISED_MODIFIERS], dtype=np.float64
+    )
 
     result = minimize(
         _objective,
@@ -221,8 +419,8 @@ def calibrate(
         args=(deformer, phase1, measurements),
         options={
             "maxtime": float(max_seconds),
-            "ftol":    1e-6,
-            "gtol":    1e-5,
+            "ftol": 1e-6,
+            "gtol": 1e-5,
         },
     )
 
@@ -255,8 +453,8 @@ def calibrate(
             "Calibration did not fully converge",
             extra={
                 "optimizer_message": result.message,
-                "final_sse":         final_sse,
-                "residuals":         residuals,
+                "final_sse": final_sse,
+                "residuals": residuals,
             },
         )
     else:
