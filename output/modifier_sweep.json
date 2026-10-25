@@ -1,0 +1,533 @@
+{
+  "fixture_mm": {
+    "height": 1720.0,
+    "chest": 1060.0,
+    "waist": 820.0,
+    "full_hip": 1040.0,
+    "shoulder_width": 440.0,
+    "upper_arm": 320.0,
+    "thigh": 580.0
+  },
+  "neutral_measurements_mm": {
+    "chest": 804.16,
+    "waist": 751.282,
+    "full_hip": 974.042,
+    "shoulder_width": 283.56,
+    "upper_arm": 240.983,
+    "thigh": 529.352
+  },
+  "modifiers": [
+    {
+      "modifier": "macrodetails-universal/Weight",
+      "bounds": [
+        0.0,
+        1.0
+      ],
+      "resolved_target_count": 0,
+      "samples": {
+        "0.0": {
+          "measurements_mm": {
+            "chest": 804.16,
+            "waist": 751.282,
+            "full_hip": 974.042,
+            "shoulder_width": 283.56,
+            "upper_arm": 240.983,
+            "thigh": 529.352
+          },
+          "delta_from_neutral_mm": {
+            "chest": 0.0,
+            "waist": 0.0,
+            "full_hip": 0.0,
+            "shoulder_width": 0.0,
+            "upper_arm": 0.0,
+            "thigh": 0.0
+          }
+        },
+        "0.5": {
+          "measurements_mm": {
+            "chest": 804.16,
+            "waist": 751.282,
+            "full_hip": 974.042,
+            "shoulder_width": 283.56,
+            "upper_arm": 240.983,
+            "thigh": 529.352
+          },
+          "delta_from_neutral_mm": {
+            "chest": 0.0,
+            "waist": 0.0,
+            "full_hip": 0.0,
+            "shoulder_width": 0.0,
+            "upper_arm": 0.0,
+            "thigh": 0.0
+          }
+        },
+        "1.0": {
+          "measurements_mm": {
+            "chest": 804.16,
+            "waist": 751.282,
+            "full_hip": 974.042,
+            "shoulder_width": 283.56,
+            "upper_arm": 240.983,
+            "thigh": 529.352
+          },
+          "delta_from_neutral_mm": {
+            "chest": 0.0,
+            "waist": 0.0,
+            "full_hip": 0.0,
+            "shoulder_width": 0.0,
+            "upper_arm": 0.0,
+            "thigh": 0.0
+          }
+        }
+      }
+    },
+    {
+      "modifier": "macrodetails-universal/Muscle",
+      "bounds": [
+        0.0,
+        1.0
+      ],
+      "resolved_target_count": 0,
+      "samples": {
+        "0.0": {
+          "measurements_mm": {
+            "chest": 804.16,
+            "waist": 751.282,
+            "full_hip": 974.042,
+            "shoulder_width": 283.56,
+            "upper_arm": 240.983,
+            "thigh": 529.352
+          },
+          "delta_from_neutral_mm": {
+            "chest": 0.0,
+            "waist": 0.0,
+            "full_hip": 0.0,
+            "shoulder_width": 0.0,
+            "upper_arm": 0.0,
+            "thigh": 0.0
+          }
+        },
+        "0.5": {
+          "measurements_mm": {
+            "chest": 804.16,
+            "waist": 751.282,
+            "full_hip": 974.042,
+            "shoulder_width": 283.56,
+            "upper_arm": 240.983,
+            "thigh": 529.352
+          },
+          "delta_from_neutral_mm": {
+            "chest": 0.0,
+            "waist": 0.0,
+            "full_hip": 0.0,
+            "shoulder_width": 0.0,
+            "upper_arm": 0.0,
+            "thigh": 0.0
+          }
+        },
+        "1.0": {
+          "measurements_mm": {
+            "chest": 804.16,
+            "waist": 751.282,
+            "full_hip": 974.042,
+            "shoulder_width": 283.56,
+            "upper_arm": 240.983,
+            "thigh": 529.352
+          },
+          "delta_from_neutral_mm": {
+            "chest": 0.0,
+            "waist": 0.0,
+            "full_hip": 0.0,
+            "shoulder_width": 0.0,
+            "upper_arm": 0.0,
+            "thigh": 0.0
+          }
+        }
+      }
+    },
+    {
+      "modifier": "measure/measure-bust-circ-decr|incr",
+      "bounds": [
+        -1.0,
+        1.0
+      ],
+      "resolved_target_count": 2,
+      "samples": {
+        "-1.0": {
+          "measurements_mm": {
+            "chest": 669.426,
+            "waist": 751.282,
+            "full_hip": 974.042,
+            "shoulder_width": 274.96,
+            "upper_arm": 240.983,
+            "thigh": 529.352
+          },
+          "delta_from_neutral_mm": {
+            "chest": -134.734,
+            "waist": 0.0,
+            "full_hip": 0.0,
+            "shoulder_width": -8.6,
+            "upper_arm": 0.0,
+            "thigh": 0.0
+          }
+        },
+        "0.0": {
+          "measurements_mm": {
+            "chest": 804.16,
+            "waist": 751.282,
+            "full_hip": 974.042,
+            "shoulder_width": 283.56,
+            "upper_arm": 240.983,
+            "thigh": 529.352
+          },
+          "delta_from_neutral_mm": {
+            "chest": 0.0,
+            "waist": 0.0,
+            "full_hip": 0.0,
+            "shoulder_width": 0.0,
+            "upper_arm": 0.0,
+            "thigh": 0.0
+          }
+        },
+        "1.0": {
+          "measurements_mm": {
+            "chest": 971.815,
+            "waist": 751.282,
+            "full_hip": 974.042,
+            "shoulder_width": 283.56,
+            "upper_arm": 240.983,
+            "thigh": 529.352
+          },
+          "delta_from_neutral_mm": {
+            "chest": 167.655,
+            "waist": 0.0,
+            "full_hip": 0.0,
+            "shoulder_width": 0.0,
+            "upper_arm": 0.0,
+            "thigh": 0.0
+          }
+        }
+      }
+    },
+    {
+      "modifier": "measure/measure-waist-circ-decr|incr",
+      "bounds": [
+        -1.0,
+        1.0
+      ],
+      "resolved_target_count": 2,
+      "samples": {
+        "-1.0": {
+          "measurements_mm": {
+            "chest": 800.542,
+            "waist": 651.609,
+            "full_hip": 974.042,
+            "shoulder_width": 283.56,
+            "upper_arm": 240.983,
+            "thigh": 529.352
+          },
+          "delta_from_neutral_mm": {
+            "chest": -3.618,
+            "waist": -99.674,
+            "full_hip": 0.0,
+            "shoulder_width": 0.0,
+            "upper_arm": 0.0,
+            "thigh": 0.0
+          }
+        },
+        "0.0": {
+          "measurements_mm": {
+            "chest": 804.16,
+            "waist": 751.282,
+            "full_hip": 974.042,
+            "shoulder_width": 283.56,
+            "upper_arm": 240.983,
+            "thigh": 529.352
+          },
+          "delta_from_neutral_mm": {
+            "chest": 0.0,
+            "waist": 0.0,
+            "full_hip": 0.0,
+            "shoulder_width": 0.0,
+            "upper_arm": 0.0,
+            "thigh": 0.0
+          }
+        },
+        "1.0": {
+          "measurements_mm": {
+            "chest": 807.819,
+            "waist": 854.422,
+            "full_hip": 974.042,
+            "shoulder_width": 283.56,
+            "upper_arm": 240.983,
+            "thigh": 529.352
+          },
+          "delta_from_neutral_mm": {
+            "chest": 3.658,
+            "waist": 103.14,
+            "full_hip": 0.0,
+            "shoulder_width": 0.0,
+            "upper_arm": 0.0,
+            "thigh": 0.0
+          }
+        }
+      }
+    },
+    {
+      "modifier": "measure/measure-hips-circ-decr|incr",
+      "bounds": [
+        -1.0,
+        1.0
+      ],
+      "resolved_target_count": 2,
+      "samples": {
+        "-1.0": {
+          "measurements_mm": {
+            "chest": 804.16,
+            "waist": 748.987,
+            "full_hip": 879.039,
+            "shoulder_width": 283.56,
+            "upper_arm": 240.983,
+            "thigh": 507.608
+          },
+          "delta_from_neutral_mm": {
+            "chest": 0.0,
+            "waist": -2.295,
+            "full_hip": -95.004,
+            "shoulder_width": 0.0,
+            "upper_arm": 0.0,
+            "thigh": -21.743
+          }
+        },
+        "0.0": {
+          "measurements_mm": {
+            "chest": 804.16,
+            "waist": 751.282,
+            "full_hip": 974.042,
+            "shoulder_width": 283.56,
+            "upper_arm": 240.983,
+            "thigh": 529.352
+          },
+          "delta_from_neutral_mm": {
+            "chest": 0.0,
+            "waist": 0.0,
+            "full_hip": 0.0,
+            "shoulder_width": 0.0,
+            "upper_arm": 0.0,
+            "thigh": 0.0
+          }
+        },
+        "1.0": {
+          "measurements_mm": {
+            "chest": 804.16,
+            "waist": 755.303,
+            "full_hip": 1165.169,
+            "shoulder_width": 283.56,
+            "upper_arm": 240.983,
+            "thigh": 574.546
+          },
+          "delta_from_neutral_mm": {
+            "chest": 0.0,
+            "waist": 4.02,
+            "full_hip": 191.127,
+            "shoulder_width": 0.0,
+            "upper_arm": 0.0,
+            "thigh": 45.194
+          }
+        }
+      }
+    },
+    {
+      "modifier": "measure/measure-upperarm-circ-decr|incr",
+      "bounds": [
+        -1.0,
+        1.0
+      ],
+      "resolved_target_count": 2,
+      "samples": {
+        "-1.0": {
+          "measurements_mm": {
+            "chest": 804.16,
+            "waist": 751.282,
+            "full_hip": 974.042,
+            "shoulder_width": 283.56,
+            "upper_arm": 153.964,
+            "thigh": 529.352
+          },
+          "delta_from_neutral_mm": {
+            "chest": 0.0,
+            "waist": 0.0,
+            "full_hip": 0.0,
+            "shoulder_width": 0.0,
+            "upper_arm": -87.019,
+            "thigh": 0.0
+          }
+        },
+        "0.0": {
+          "measurements_mm": {
+            "chest": 804.16,
+            "waist": 751.282,
+            "full_hip": 974.042,
+            "shoulder_width": 283.56,
+            "upper_arm": 240.983,
+            "thigh": 529.352
+          },
+          "delta_from_neutral_mm": {
+            "chest": 0.0,
+            "waist": 0.0,
+            "full_hip": 0.0,
+            "shoulder_width": 0.0,
+            "upper_arm": 0.0,
+            "thigh": 0.0
+          }
+        },
+        "1.0": {
+          "measurements_mm": {
+            "chest": 804.16,
+            "waist": 751.282,
+            "full_hip": 974.042,
+            "shoulder_width": 283.56,
+            "upper_arm": 331.114,
+            "thigh": 529.352
+          },
+          "delta_from_neutral_mm": {
+            "chest": 0.0,
+            "waist": 0.0,
+            "full_hip": 0.0,
+            "shoulder_width": 0.0,
+            "upper_arm": 90.131,
+            "thigh": 0.0
+          }
+        }
+      }
+    },
+    {
+      "modifier": "measure/measure-thigh-circ-decr|incr",
+      "bounds": [
+        -1.0,
+        1.0
+      ],
+      "resolved_target_count": 2,
+      "samples": {
+        "-1.0": {
+          "measurements_mm": {
+            "chest": 804.16,
+            "waist": 751.282,
+            "full_hip": 974.042,
+            "shoulder_width": 283.56,
+            "upper_arm": 240.983,
+            "thigh": 472.534
+          },
+          "delta_from_neutral_mm": {
+            "chest": 0.0,
+            "waist": 0.0,
+            "full_hip": 0.0,
+            "shoulder_width": 0.0,
+            "upper_arm": 0.0,
+            "thigh": -56.818
+          }
+        },
+        "0.0": {
+          "measurements_mm": {
+            "chest": 804.16,
+            "waist": 751.282,
+            "full_hip": 974.042,
+            "shoulder_width": 283.56,
+            "upper_arm": 240.983,
+            "thigh": 529.352
+          },
+          "delta_from_neutral_mm": {
+            "chest": 0.0,
+            "waist": 0.0,
+            "full_hip": 0.0,
+            "shoulder_width": 0.0,
+            "upper_arm": 0.0,
+            "thigh": 0.0
+          }
+        },
+        "1.0": {
+          "measurements_mm": {
+            "chest": 804.16,
+            "waist": 751.282,
+            "full_hip": 974.042,
+            "shoulder_width": 283.56,
+            "upper_arm": 240.983,
+            "thigh": 616.818
+          },
+          "delta_from_neutral_mm": {
+            "chest": 0.0,
+            "waist": 0.0,
+            "full_hip": 0.0,
+            "shoulder_width": 0.0,
+            "upper_arm": 0.0,
+            "thigh": 87.466
+          }
+        }
+      }
+    },
+    {
+      "modifier": "measure/measure-shoulder-dist-decr|incr",
+      "bounds": [
+        -1.0,
+        1.0
+      ],
+      "resolved_target_count": 2,
+      "samples": {
+        "-1.0": {
+          "measurements_mm": {
+            "chest": 796.664,
+            "waist": 751.282,
+            "full_hip": 974.042,
+            "shoulder_width": 261.96,
+            "upper_arm": 240.983,
+            "thigh": 529.352
+          },
+          "delta_from_neutral_mm": {
+            "chest": -7.496,
+            "waist": 0.0,
+            "full_hip": 0.0,
+            "shoulder_width": -21.6,
+            "upper_arm": 0.0,
+            "thigh": 0.0
+          }
+        },
+        "0.0": {
+          "measurements_mm": {
+            "chest": 804.16,
+            "waist": 751.282,
+            "full_hip": 974.042,
+            "shoulder_width": 283.56,
+            "upper_arm": 240.983,
+            "thigh": 529.352
+          },
+          "delta_from_neutral_mm": {
+            "chest": 0.0,
+            "waist": 0.0,
+            "full_hip": 0.0,
+            "shoulder_width": 0.0,
+            "upper_arm": 0.0,
+            "thigh": 0.0
+          }
+        },
+        "1.0": {
+          "measurements_mm": {
+            "chest": 806.014,
+            "waist": 751.282,
+            "full_hip": 974.042,
+            "shoulder_width": 324.56,
+            "upper_arm": 240.983,
+            "thigh": 529.352
+          },
+          "delta_from_neutral_mm": {
+            "chest": 1.854,
+            "waist": 0.0,
+            "full_hip": 0.0,
+            "shoulder_width": 41.0,
+            "upper_arm": -0.0,
+            "thigh": 0.0
+          }
+        }
+      }
+    }
+  ]
+}
