@@ -79,8 +79,8 @@ CANDIDATE_POSITIONS: dict[str, list[float]] = {
     "crotch_point":       [ 0.00,  0.25,  0.90],
     "left_knee":          [-1.65, -3.90,  0.20],
     "right_knee":         [ 1.65, -3.90,  0.20],
-    "left_wrist":         [-8.60,  3.60,  -0.80],
-    "right_wrist":        [ 8.60,  3.60,  -0.80],
+    "left_wrist":         [-4.176,  2.732,   1.155],
+    "right_wrist":        [ 4.176,  2.732,   1.155],
 }
 
 
