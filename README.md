@@ -97,7 +97,7 @@ AWS credentials are read from the standard credential chain (instance profile in
 docker compose up -d
 ```
 
-This starts `seam_avatar`, Redis, and LocalStack (S3). The bucket initializer
+This starts `seam_avatar`, Redis, and pinned LocalStack (S3). The bucket initializer
 is idempotent, so restarting the stack is safe. The service is ready when
 `GET http://localhost:8081/health/ready` returns `200`.
 
