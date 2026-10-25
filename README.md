@@ -94,10 +94,39 @@ AWS credentials are read from the standard credential chain (instance profile in
 ## Running locally
 
 ```bash
-docker compose up
+docker compose up -d
 ```
 
-This starts `seam_avatar`, Redis, and LocalStack (S3). The service is ready when `GET http://localhost:8081/health/ready` returns `200`.
+This starts `seam_avatar`, Redis, and LocalStack (S3). The bucket initializer
+is idempotent, so restarting the stack is safe. The service is ready when
+`GET http://localhost:8081/health/ready` returns `200`.
+
+The development ports are bound to loopback only. Override them when another
+local stack already uses the defaults:
+
+```bash
+SEAM_AVATAR_REDIS_PORT=16379 \
+SEAM_AVATAR_LOCALSTACK_PORT=14566 \
+SEAM_AVATAR_HEALTH_PORT=18081 \
+docker compose up -d
+```
+
+When the Seam backend runs on the host, point it at the same published Redis
+and LocalStack ports. In the integrated setup, start PostgreSQL from the Seam
+repository, but do not start its standalone Redis service:
+
+```bash
+# seam_avatar repository
+docker compose up -d
+
+# seam repository
+docker compose up -d postgres
+```
+
+The backend must use Redis database `2`, queue `avatar`, prefix `bull`, and the
+`seam-avatar-cache` bucket. The MakeHuman data assets still need to be supplied
+to the avatar build/runtime separately; packaging those assets is intentionally
+not handled by this Compose change.
 
 To run the end-to-end smoke test against the compose stack:
 

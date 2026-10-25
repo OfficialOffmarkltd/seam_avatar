@@ -1,3 +1,5 @@
+name: seam-avatar
+
 services:
 
   # ── seam_avatar ─────────────────────────────────────────────────────────────
@@ -6,8 +8,8 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-      localstack:
-        condition: service_healthy
+      localstack_init:
+        condition: service_completed_successfully
     environment:
       # Required
       REDIS_URL:             redis://redis:6379/2
@@ -25,7 +27,9 @@ services:
       CALIBRATION_MAX_SECONDS: "5"
       HEALTH_PORT:           "8081"
     ports:
-      - "8081:8081"
+      - "127.0.0.1:${SEAM_AVATAR_HEALTH_PORT:-8081}:8081"
+    init: true
+    stop_grace_period: 30s
     healthcheck:
       test: ["CMD", "python", "-c",
              "import urllib.request; urllib.request.urlopen('http://localhost:8081/health/ready')"]
@@ -33,18 +37,22 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s   # allow time for MakeHuman data to load on cold start
-    restart: on-failure
+    restart: unless-stopped
 
   # ── redis ────────────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
     ports:
-      - "6379:6379"
+      - "127.0.0.1:${SEAM_AVATAR_REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
+    restart: unless-stopped
 
   # ── localstack (S3) ──────────────────────────────────────────────────────────
   localstack:
@@ -54,7 +62,7 @@ services:
       DEFAULT_REGION:  us-east-1
       EAGER_SERVICE_LOADING: "1"
     ports:
-      - "4566:4566"
+      - "127.0.0.1:${SEAM_AVATAR_LOCALSTACK_PORT:-4566}:4566"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
       interval: 5s
@@ -63,6 +71,7 @@ services:
       start_period: 10s
     volumes:
       - localstack_data:/var/lib/localstack
+    restart: unless-stopped
 
   # ── localstack init ──────────────────────────────────────────────────────────
   # Creates the S3 bucket on first startup so seam_avatar can upload immediately.
@@ -75,10 +84,19 @@ services:
       AWS_ACCESS_KEY_ID:     test
       AWS_SECRET_ACCESS_KEY: test
       AWS_DEFAULT_REGION:    us-east-1
-    entrypoint: >
-      aws --endpoint-url=http://localstack:4566 s3 mb s3://seam-avatar-cache
-      --region us-east-1
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        aws --endpoint-url=http://localstack:4566 s3api head-bucket
+        --bucket seam-avatar-cache >/dev/null 2>&1 ||
+        aws --endpoint-url=http://localstack:4566 s3 mb s3://seam-avatar-cache
+        --region us-east-1
     restart: "no"
+
+networks:
+  default:
+    name: seam-avatar
 
 volumes:
   localstack_data:
+  redis_data:
