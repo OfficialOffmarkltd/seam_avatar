@@ -14,12 +14,9 @@ class Config:
     makehuman_data_path: str
     aws_region: str
     # Optional with defaults
-    redis_queue_name: str        = "seam_avatar:jobs"
-    redis_dead_letter_queue: str = "seam_avatar:jobs:dead"
-    redis_completed_channel: str = "seam_avatar:completed"
-    redis_failed_channel: str    = "seam_avatar:failed"
+    redis_queue_name: str        = "avatar"
+    bullmq_prefix: str           = "bull"
     calibration_max_seconds: int = 5
-    job_max_retries: int         = 3
     log_level: str               = "INFO"
     aws_endpoint_url: str | None = None
     health_port: int             = 8081
@@ -67,12 +64,9 @@ def load_config() -> Config:
         avatar_cache_bucket     = os.environ["AVATAR_CACHE_BUCKET"],
         makehuman_data_path     = os.environ["MAKEHUMAN_DATA_PATH"],
         aws_region              = os.environ["AWS_REGION"],
-        redis_queue_name        = os.environ.get("REDIS_QUEUE_NAME",        "seam_avatar:jobs"),
-        redis_dead_letter_queue = os.environ.get("REDIS_DEAD_LETTER_QUEUE", "seam_avatar:jobs:dead"),
-        redis_completed_channel = os.environ.get("REDIS_COMPLETED_CHANNEL", "seam_avatar:completed"),
-        redis_failed_channel    = os.environ.get("REDIS_FAILED_CHANNEL",    "seam_avatar:failed"),
+        redis_queue_name        = os.environ.get("REDIS_QUEUE_NAME",        "avatar"),
+        bullmq_prefix           = os.environ.get("BULLMQ_PREFIX",           "bull"),
         calibration_max_seconds = get_int("CALIBRATION_MAX_SECONDS", 5),
-        job_max_retries         = get_int("JOB_MAX_RETRIES",          3),
         log_level               = os.environ.get("LOG_LEVEL",               "INFO"),
         aws_endpoint_url        = os.environ.get("AWS_ENDPOINT_URL"),
         health_port             = _validated_port(get_int("HEALTH_PORT", 8081)),

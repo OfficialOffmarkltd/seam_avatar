@@ -8,7 +8,6 @@ import structlog
 from config import ConfigError, load_config
 from health import start_health_server
 from storage.cache import S3CacheClient
-from storage.events import RedisEventEmitter
 
 
 def _configure_logging(log_level: str) -> None:
@@ -100,25 +99,19 @@ def main() -> None:
     ready_flag.set()
     log.info("Service ready")
 
-    # 9. Build storage and event components
+    # 9. Build storage component
     cache = S3CacheClient(
         bucket=config.avatar_cache_bucket,
         region=config.aws_region,
         endpoint_url=config.aws_endpoint_url,
     )
-    emitter = RedisEventEmitter(
-        redis_client=redis_client,
-        completed_channel=config.redis_completed_channel,
-        failed_channel=config.redis_failed_channel,
-    )
 
-    # 10. Build worker and run — blocks here until KeyboardInterrupt or process kill
+    # 10. Build BullMQ worker and run until SIGINT/SIGTERM
     from worker import AvatarWorker
     worker = AvatarWorker(
         config=config,
         deformer=deformer,
         cache=cache,
-        emitter=emitter,
     )
 
     try:

@@ -10,7 +10,7 @@ services:
         condition: service_healthy
     environment:
       # Required
-      REDIS_URL:             redis://redis:6379/0
+      REDIS_URL:             redis://redis:6379/2
       AVATAR_CACHE_BUCKET:   seam-avatar-cache
       MAKEHUMAN_DATA_PATH:   /app/vendor/makehuman/data
       AWS_REGION:            us-east-1
@@ -18,10 +18,11 @@ services:
       AWS_ENDPOINT_URL:      http://localstack:4566
       AWS_ACCESS_KEY_ID:     test
       AWS_SECRET_ACCESS_KEY: test
+      REDIS_QUEUE_NAME:      avatar
+      BULLMQ_PREFIX:         bull
       # Optional — override defaults if needed
       LOG_LEVEL:             INFO
       CALIBRATION_MAX_SECONDS: "5"
-      JOB_MAX_RETRIES:       "3"
       HEALTH_PORT:           "8081"
     ports:
       - "8081:8081"

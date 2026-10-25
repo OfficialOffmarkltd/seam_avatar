@@ -11,15 +11,15 @@ This service is published as open source to satisfy the AGPL-3.0 licence of Make
 ## How it fits into Seam
 
 ```
-seam_backend  ──RPUSH──►  Redis queue  ──►  seam_avatar  ──►  S3 (.glb cache)
-                                                                    │
-seam_backend  ◄── pub/sub completion event ─────────────────────────┘
-                          │
-                    seam_backend fetches .glb from S3
+seam_backend  ──BullMQ job──►  Redis queue  ──►  seam_avatar  ──►  S3 (.glb cache)
+                                      │                  │
+seam_backend  ◄── BullMQ job result ──┘                  │
+                          │                              │
+                    seam_backend fetches the cached .glb ┘
                     and uses it as the TPS deformation surface
 ```
 
-`seam_backend` submits a job with a `BodyMeasurements` JSON payload. `seam_avatar` deforms the mesh, extracts named anatomical anchor points, exports a `.glb` with the anchors embedded in `scene.extras`, uploads to S3, and publishes a completion event. In steady state — when the measurement profile has been seen before — `seam_avatar` is not called at all. `seam_backend` fetches the cached `.glb` directly from S3.
+`seam_backend` submits a `generate-avatar` job to the BullMQ `avatar` queue. `seam_avatar` deforms the mesh, extracts named anatomical anchor points, exports a `.glb` with the anchors embedded in `scene.extras`, uploads to S3, and returns the completion payload as the BullMQ job result. In steady state — when the measurement profile has been seen before — `seam_avatar` returns the cached result without deforming the mesh.
 
 ---
 
@@ -71,7 +71,7 @@ All configuration is via environment variables. The service refuses to start if 
 
 | Variable | Description |
 |---|---|
-| `REDIS_URL` | Redis connection string, e.g. `redis://localhost:6379/0` |
+| `REDIS_URL` | Redis connection string, e.g. `redis://localhost:6379/2`; must use the same BullMQ database as Seam |
 | `AVATAR_CACHE_BUCKET` | S3 bucket name for `.glb` cache |
 | `MAKEHUMAN_DATA_PATH` | Absolute path to MakeHuman data directory |
 | `AWS_REGION` | AWS region for S3 operations |
@@ -80,12 +80,9 @@ All configuration is via environment variables. The service refuses to start if 
 
 | Variable | Default | Description |
 |---|---|---|
-| `REDIS_QUEUE_NAME` | `seam_avatar:jobs` | Queue key to pop jobs from |
-| `REDIS_DEAD_LETTER_QUEUE` | `seam_avatar:jobs:dead` | Dead-letter queue key |
-| `REDIS_COMPLETED_CHANNEL` | `seam_avatar:completed` | Pub/sub completion channel |
-| `REDIS_FAILED_CHANNEL` | `seam_avatar:failed` | Pub/sub failure channel |
+| `REDIS_QUEUE_NAME` | `avatar` | BullMQ queue name |
+| `BULLMQ_PREFIX` | `bull` | BullMQ Redis key prefix; must match producers |
 | `CALIBRATION_MAX_SECONDS` | `5` | Optimisation time budget per job |
-| `JOB_MAX_RETRIES` | `3` | Retries before dead-letter |
 | `LOG_LEVEL` | `INFO` | Python logging level |
 | `AWS_ENDPOINT_URL` | — | S3 endpoint override (LocalStack) |
 | `HEALTH_PORT` | `8081` | Port for health check HTTP server |
@@ -112,12 +109,12 @@ python scripts/smoke_test.py
 
 ## Job payload format
 
-`seam_backend` pushes jobs as JSON to the `seam_avatar:jobs` Redis list. All measurement fields use tenths-of-mm integers with `_tmm` suffix (e.g. `chest_tmm: 1080` = 108.0mm):
+`seam_backend` adds jobs to the BullMQ `avatar` queue with the name `generate-avatar`. All measurement fields use tenths-of-mm integers with `_tmm` suffix (e.g. `chest_tmm: 10600` = 1060.0mm):
 
 ```json
 {
-  "job_id":     "550e8400-e29b-41d4-a716-446655440000",
   "profile_id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+  "avatar_version": "fixed-avatar-v1",
   "measurements": {
     "height_tmm":          17200,
     "chest_tmm":           10600,
@@ -128,16 +125,20 @@ python scripts/smoke_test.py
 }
 ```
 
+The BullMQ job ID is available to the worker as `job.id`. Producers may also
+include `job_id` in the data for compatibility with older callers.
+
 Any field not provided is treated as `null` — the service proceeds with whatever measurements are available.
 
-## Completion event format
+## BullMQ job result format
 
-Published to `seam_avatar:completed` on success:
+Returned by the `generate-avatar` processor on success:
 
 ```json
 {
   "job_id":       "550e8400-e29b-41d4-a716-446655440000",
   "profile_id":   "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+  "avatar_version": "fixed-avatar-v1",
   "profile_hash": "a3f8b2c1d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1",
   "s3_key":       "avatars/cache/a3f8b2c1...glb",
   "anchor_count": 25,

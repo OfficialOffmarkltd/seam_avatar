@@ -56,12 +56,14 @@ class AvatarAnchor:
 class JobPayload:
     job_id: str
     profile_id: str
+    avatar_version: str
     measurements: BodyMeasurements
 
 @dataclass
 class JobResult:
     job_id: str
     profile_id: str
+    avatar_version: str
     profile_hash: str
     s3_key: str
     anchor_count: int
